@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Diese Zeile verbietet dem Browser jede Verbindung ins Internet (connect-src 'none'). Das Werkzeug kann nichts hochladen. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' blob: 'wasm-unsafe-eval'; worker-src blob:; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<title>PDF-Baukasten</title>
+<style>
+/*STYLE*/
+</style>
+</head>
+<body>
+
+<header class="kopf">
+  <div class="marke">
+    <svg viewBox="0 0 28 28" width="26" height="26" aria-hidden="true">
+      <rect width="28" height="28" rx="7.5" style="fill:var(--tinte)"/>
+      <path d="M9 6.2h6.6L19.5 10v11.8H9z" style="fill:var(--tinte-text)"/>
+      <rect x="11.3" y="16.6" width="5.9" height="2.9" rx="1.45" style="fill:var(--rot)"/>
+    </svg>
+    <span>PDF-Baukasten</span>
+  </div>
+  <p class="lokal">
+    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+    Läuft nur auf diesem Rechner. Es wird nichts hochgeladen.
+  </p>
+  <div class="kopf-rechts">
+    <button type="button" class="symbolknopf" id="info-auf" title="Über das Werkzeug" aria-label="Über das Werkzeug">
+      <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><circle cx="12" cy="12" r="8.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v5.4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="12" cy="7.9" r="1.15" fill="currentColor"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="werkbank">
+
+  <section class="bestand" aria-labelledby="bestand-titel">
+    <div class="leiste">
+      <div class="leiste-titel">
+        <h1 id="bestand-titel">Bestand</h1>
+        <span class="zahl" id="bestand-zahl"></span>
+      </div>
+      <div class="leiste-werkzeug">
+        <label class="suche">
+          <span class="nur-vorlesen">Im Bestand suchen</span>
+          <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.2" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M15.2 15.2l4.6 4.6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+          <input type="search" id="suche" placeholder="Im Bestand suchen" autocomplete="off">
+          <kbd title="Taste / springt in die Suche">/</kbd>
+        </label>
+        <label class="wahl">
+          <span class="nur-vorlesen">Sortierung</span>
+          <select id="sortierung">
+            <option value="name">Nach Name</option>
+            <option value="neu">Neueste zuerst</option>
+            <option value="auswahl">Ausgewählte zuerst</option>
+          </select>
+        </label>
+        <button type="button" class="knopf" id="hinzu-ordner">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M3.5 7.2a1.7 1.7 0 0 1 1.7-1.7h4.1l2 2.3h7.5a1.7 1.7 0 0 1 1.7 1.7v7.3a1.7 1.7 0 0 1-1.7 1.7H5.2a1.7 1.7 0 0 1-1.7-1.7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          Ordner
+        </button>
+        <button type="button" class="knopf" id="hinzu">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg>
+          PDFs hinzufügen
+        </button>
+      </div>
+    </div>
+
+    <div class="meldung" id="import-lauf" hidden>
+      <div class="meldung-text" id="import-text"></div>
+      <div class="balken"><div class="balken-fuellung" id="import-balken"></div></div>
+    </div>
+    <div class="meldung meldung-achtung" id="import-bericht" hidden>
+      <div class="meldung-text" id="bericht-text"></div>
+      <button type="button" class="textknopf" id="bericht-zu">Schließen</button>
+    </div>
+    <div class="meldung meldung-achtung" id="speicher-hinweis" hidden>
+      <div class="meldung-text">Dieser Browser erlaubt hier kein Speichern. Der Baukasten funktioniert, vergisst den Bestand aber beim Schließen.</div>
+    </div>
+
+    <div class="tabelle" id="tabelle" hidden>
+      <div class="zeile tabelle-kopf">
+        <label class="haken">
+          <input type="checkbox" id="alle">
+          <span class="kasten kasten-alle"></span>
+          <span class="nur-vorlesen">Alle angezeigten PDFs auswählen</span>
+        </label>
+        <span class="kopf-wort">Alle auswählen</span>
+        <span class="rechts">Seiten</span>
+        <span class="rechts">Größe</span>
+        <span></span>
+      </div>
+      <ul class="liste" id="liste"></ul>
+      <p class="keine-treffer" id="keine-treffer" hidden></p>
+    </div>
+
+    <div class="leer" id="leer">
+      <div class="faecher" aria-hidden="true"><i><b>1</b></i><i><b>2</b></i><i><b>3</b></i></div>
+      <h2>PDFs hierher ziehen</h2>
+      <p>Einzelne Dateien oder ein ganzer Ordner. Der Baukasten merkt sich Bestand und Namen in diesem Browser, die Dateien bleiben auf diesem Rechner.</p>
+      <div class="leer-knoepfe">
+        <button type="button" class="knopf knopf-haupt" id="leer-hinzu">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg>
+          PDFs hinzufügen
+        </button>
+        <button type="button" class="knopf" id="leer-ordner">Ordner hinzufügen</button>
+      </div>
+    </div>
+
+    <div class="abwurf" id="abwurf" hidden><span>Loslassen, um die PDFs in den Bestand zu legen</span></div>
+  </section>
+
+  <aside class="mappe" aria-label="Mappe">
+    <div class="mappe-kopf">
+      <label class="titel">
+        <span class="nur-vorlesen">Name der Mappe</span>
+        <input type="text" id="mappe-name" maxlength="120" autocomplete="off" spellcheck="false" placeholder="Name der Mappe">
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M4.5 19.5l1-4.2L16.2 4.6a1.7 1.7 0 0 1 2.4 0l.8.8a1.7 1.7 0 0 1 0 2.4L8.7 18.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      </label>
+      <p class="summe" id="summe"></p>
+    </div>
+
+    <div class="mappe-mitte">
+      <div class="vorschau">
+        <div class="buehne">
+          <div class="blatt-rahmen">
+            <div class="blatt" id="blatt">
+              <canvas id="blatt-bild"></canvas>
+              <div class="blatt-muster" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="zonen" id="zonen" aria-hidden="true">
+                <i data-position="oben-links"></i><i data-position="oben-mitte"></i><i data-position="oben-rechts"></i>
+                <i data-position="unten-links"></i><i data-position="unten-mitte"></i><i data-position="unten-rechts"></i>
+              </div>
+              <div class="lupe" id="lupe" aria-hidden="true">
+                <div class="lupe-glas"><canvas id="lupe-bild"></canvas><span id="lupe-zahl"></span></div>
+                <svg class="lupe-marke" viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="12" r="12" style="fill:var(--rot)"/><circle cx="11" cy="11" r="4.2" fill="none" stroke="#fff" stroke-width="2"/><path d="M14.2 14.2l3.4 3.4" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+              </div>
+            </div>
+          </div>
+          <div class="blaettern">
+            <button type="button" class="mini" id="blatt-zurueck" title="Vorige Seite" aria-label="Vorige Seite"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M14.5 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <span id="blatt-nr"></span>
+            <button type="button" class="mini" id="blatt-vor" title="Nächste Seite" aria-label="Nächste Seite"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+        </div>
+
+        <fieldset class="zahlen" id="zahlen">
+          <legend class="nur-vorlesen">Seitenzahlen</legend>
+          <label class="schalter">
+            <span>Seitenzahlen</span>
+            <input type="checkbox" id="zahlen-an">
+          </label>
+          <div class="zahlen-felder">
+            <div class="feld">
+              <span class="feld-name" id="position-name">Position auf der Seite</span>
+              <div class="raster" role="radiogroup" aria-labelledby="position-name">
+                <label class="punkt punkt-ol" title="Oben links"><input type="radio" name="position" value="oben-links"><span class="nur-vorlesen">Oben links</span><b></b></label>
+                <label class="punkt punkt-om" title="Oben mittig"><input type="radio" name="position" value="oben-mitte"><span class="nur-vorlesen">Oben mittig</span><b></b></label>
+                <label class="punkt punkt-or" title="Oben rechts"><input type="radio" name="position" value="oben-rechts"><span class="nur-vorlesen">Oben rechts</span><b></b></label>
+                <label class="punkt punkt-ul" title="Unten links"><input type="radio" name="position" value="unten-links"><span class="nur-vorlesen">Unten links</span><b></b></label>
+                <label class="punkt punkt-um" title="Unten mittig"><input type="radio" name="position" value="unten-mitte"><span class="nur-vorlesen">Unten mittig</span><b></b></label>
+                <label class="punkt punkt-ur" title="Unten rechts"><input type="radio" name="position" value="unten-rechts"><span class="nur-vorlesen">Unten rechts</span><b></b></label>
+              </div>
+            </div>
+            <label class="feld">
+              <span class="feld-name">Schreibweise</span>
+              <select id="format">
+                <option value="zahl">1</option>
+                <option value="seite">Seite 1</option>
+                <option value="bruch">1 / 12</option>
+                <option value="von">Seite 1 von 12</option>
+                <option value="strich">– 1 –</option>
+              </select>
+            </label>
+            <label class="feld">
+              <span class="feld-name">Beginnt bei</span>
+              <input type="number" id="start" min="1" max="99999" step="1" inputmode="numeric">
+            </label>
+            <div class="feld-reihe">
+              <label class="feld">
+                <span class="feld-name">Schrift</span>
+                <select id="groesse">
+                  <option value="8">8 pt</option>
+                  <option value="9">9 pt</option>
+                  <option value="10">10 pt</option>
+                  <option value="11">11 pt</option>
+                  <option value="12">12 pt</option>
+                  <option value="14">14 pt</option>
+                </select>
+              </label>
+              <label class="feld">
+                <span class="feld-name">Rand</span>
+                <select id="rand">
+                  <option value="6">6 mm</option>
+                  <option value="10">10 mm</option>
+                  <option value="15">15 mm</option>
+                  <option value="20">20 mm</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </fieldset>
+      </div>
+
+      <div class="reihenfolge">
+        <div class="reihenfolge-kopf">
+          <h2>Reihenfolge</h2>
+          <button type="button" class="textknopf" id="auswahl-leeren" hidden>Auswahl leeren</button>
+        </div>
+        <ol class="mappe-liste" id="mappe-liste"></ol>
+        <p class="mappe-leer" id="mappe-leer">Im Bestand ein Häkchen bei jeder PDF setzen, die in die Mappe soll.</p>
+      </div>
+    </div>
+
+    <div class="mappe-fuss">
+      <button type="button" class="knopf-gross" id="erstellen" disabled>
+        <span class="fuellung" id="bau-balken"></span>
+        <span class="aufschrift" id="erstellen-text">Mappe erstellen</span>
+      </button>
+      <p class="ergebnis" id="ergebnis" hidden></p>
+    </div>
+  </aside>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden>
+  <span id="toast-text"></span>
+  <button type="button" class="textknopf" id="toast-knopf" hidden></button>
+</div>
+
+<dialog class="fenster" id="info" aria-labelledby="info-titel">
+  <h2 id="info-titel">Über den PDF-Baukasten</h2>
+  <p>Der Baukasten hält einen Bestand an PDFs bereit, stellt daraus per Häkchen neue Mappen zusammen und schreibt durchlaufende Seitenzahlen auf jede Seite.</p>
+  <h3>Wo die Dateien liegen</h3>
+  <p>Alles passiert in diesem Browser auf diesem Rechner. Das Werkzeug ist eine einzelne Datei, und im Kopf dieser Datei ist jede Verbindung ins Internet verboten. Die PDFs im Bestand sind Kopien. Die Originale werden nie verändert.</p>
+  <p id="speicher-zeile"></p>
+  <h3>Gut zu wissen</h3>
+  <p>Der Bestand gehört zu diesem Browser. Wer die Browserdaten löscht oder einen anderen Browser nimmt, fängt mit einem leeren Bestand an. Passwortgeschützte PDFs lassen sich nicht aufnehmen.</p>
+  <h3>Bestand löschen</h3>
+  <p>Entfernt alle PDFs, Namen und Einstellungen aus diesem Browser. Die Originale auf der Festplatte bleiben.</p>
+  <p><button type="button" class="knopf knopf-gefahr" id="alles-loeschen">Bestand vollständig löschen</button></p>
+  <p class="klein">Version /*VERSION*/. Freie Bausteine: pdf-lib (MIT, © 2019 Andrew Dillon) fügt die PDFs zusammen, PDF.js (Apache 2.0, © Mozilla) zeichnet die Vorschau, die Schrift ist Geist (SIL Open Font License, © Vercel).</p>
+  <form method="dialog" class="fenster-fuss"><button class="knopf knopf-haupt">Schließen</button></form>
+</dialog>
+
+<input type="file" id="datei-wahl" accept="application/pdf,.pdf" multiple hidden>
+<input type="file" id="ordner-wahl" webkitdirectory multiple hidden>
+
+<!--
+Verwendete freie Bausteine
+
+pdf-lib 1.17.1, MIT License, Copyright (c) 2019 Andrew Dillon
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and
+to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of
+the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO
+EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+PDF.js /*PDFJS_VERSION*/, Copyright Mozilla Foundation, Apache License 2.0, https://www.apache.org/licenses/LICENSE-2.0
+
+Geist, Copyright (c) 2023 Vercel, in collaboration with basement.studio, SIL Open Font License 1.1, https://openfontlicense.org
+-->
+<script>
+/*PDFLIB*/
+</script>
+<script type="text/plain" id="pdfjs-quelle">/*PDFJS*/</script>
+<script type="text/plain" id="pdfjs-helfer">/*PDFJS_HELFER*/</script>
+<script>
+/*APP*/
+</script>
+</body>
+</html>

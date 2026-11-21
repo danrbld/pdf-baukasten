@@ -1,0 +1,5 @@
+node_modules/
+test/daten/
+test/ausgabe/
+test/daten-demo300/
+test/daten-demo/
