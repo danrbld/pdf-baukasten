@@ -477,8 +477,8 @@ function buehnenSkript(K) {
       k.style.animationDelay = ab + 'ms';
       if (opt.nr) k.append(neu('b', '', opt.nr));
       const p = neu('p');
-      let zeit = ab + 40;                // Wörter fast mit dem Kasten, sonst blitzt ein leerer Kasten auf
-      text.split('|').forEach((zeile, i) => { if (i) p.append(document.createElement('br')); zeit = worte(p, zeile, zeit, 55, opt.fest); });
+      // Der Text kommt mit dem Kasten (nicht Wort für Wort), sonst ist kurz ein leerer Kasten zu sehen
+      text.split('|').forEach((zeile, i) => { if (i) p.append(document.createElement('br')); worte(p, zeile, 0, 0, true); });
       k.append(p);
       u.append(k);
     },
@@ -503,7 +503,7 @@ function buehnenSkript(K) {
       const zahlzeile = neu('p', 'zeile zahl');
       const zahl = neu('em', '', d.nummern[0]);
       zahlzeile.append(zahl, ' ' + d.einheit);
-      zahlzeile.style.animationDelay = '1130ms';
+      zahlzeile.style.animationDelay = '1450ms';      // erst wenn das Blättern läuft, sonst steht kurz „1 Seiten.“ da
       const wort = neu('p', 'zeile wort');
       worte(wort, d.wort, 3120, 60);
       e.append(stoss, eine, zahlzeile, wort);
@@ -647,9 +647,9 @@ async function tempo(k, misch = false) {
   tempoJetzt = k;
 }
 // Schnelle Fahrt: stärkere Zeitlupe, die Bilder werden später gemittelt (Bewegungsunschärfe)
-async function wisch(tat) {
+async function wisch(tat, k = ZL_WISCH) {
   const vorher = tempoJetzt;
-  await tempo(ZL_WISCH, true);
+  await tempo(ENTWURF ? ZL : k, true);
   await tat();
   await tempo(vorher, false);
 }
@@ -845,12 +845,13 @@ await bis(11.20, 'Anhaken');
 
 // 7. Suchen und anhaken: Die Kamera geht einen Schritt zurück, der Zeiger zur Suche
 szene('7 Anhaken');
-await B('ut', TEXT.schritte[1], { nr: 2 });
+// Untertitel erst, wenn die Kamera angekommen ist und die Handlung beginnt (sonst steht er über dem vorigen Schritt)
 await wisch(async () => {
   await blick(...W.W2, { dauer: 480 });
   await zu('#suche', { x: 70 }, 440);
   await warte(40);
 });
+await B('ut', TEXT.schritte[1], { nr: 2 });
 await druecke();
 await page.keyboard.press('Control+A');
 await tippe('protokoll', 28);
@@ -860,7 +861,6 @@ await bis(13.50, 'Reihenfolge');
 
 // 8. Reihenfolge ziehen: schneller Schwenk nach rechts, die fünfte Zeile wandert ganz nach oben
 szene('8 Reihenfolge');
-await B('ut', TEXT.schritte[2], { nr: 3 });
 const fuenfter = app.locator('#mappe-liste li').nth(4);
 const gezogen = await fuenfter.locator('strong').innerText();
 await wisch(async () => {
@@ -868,6 +868,7 @@ await wisch(async () => {
   await zu(fuenfter, { x: 150 }, 560);
   await warte(20);
 });
+await B('ut', TEXT.schritte[2], { nr: 3 });
 await B('klick');
 await page.mouse.down();
 await fahre(maus.x + 6, maus.y - 16, 100);                      // ein kleines Stück, damit das Ziehen beginnt
@@ -881,12 +882,12 @@ await bis(15.45, 'Seitenzahl');
 
 // 9. Seitenzahl setzen: Ecke anklicken, Schreibweise wählen, blättern
 szene('9 Seitenzahl');
-await B('ut', TEXT.schritte[3], { nr: 4 });
 await wisch(async () => {
   await blick(...W.W4, { dauer: 540 });
   await zu('#zonen i[data-position="unten-rechts"]', undefined, 520);
   await warte(20);
 });
+await B('ut', TEXT.schritte[3], { nr: 4 });
 await druecke();
 await warte(380);
 const glas = await kasten('#lupe');
@@ -903,12 +904,13 @@ await bis(18.35, 'Erstellen');
 
 // 10. Ein Klick: Das Erstellen läuft in echter Geschwindigkeit
 szene('10 Erstellen');
-await B('ut', TEXT.schritte[4], { nr: 5 });
 await wisch(async () => {
   await blick(...W.W6, { dauer: 600 });
   await zu('#erstellen', { y: 30 }, 560);
   await warte(20);
 });
+await B('ut', TEXT.schritte[4], { nr: 5 });
+await warte(200);                                               // Untertitel steht, bevor geklickt wird
 await tempo(1);
 const [download] = await Promise.all([page.waitForEvent('download', { timeout: 120000 }), druecke()]);
 await app.waitForFunction(() => !document.querySelector('#ergebnis').hidden);
@@ -956,7 +958,7 @@ await wisch(async () => {
   await bis(t11 + 0.66);
 });
 await bis(t11 + 1.18);
-await wisch(async () => { await bis(t11 + 3.08); });            // das Blättern mit Bewegungsunschärfe
+// Blättern ohne Bewegungsunschärfe: Das Mitteln legte wechselnde Seitenzahlen übereinander („13/17 Seiten“)
 await bis(t11 + 3.70);
 
 // ---- 12. Schluss ----
@@ -974,7 +976,7 @@ const t13 = filmJetzt();
 await wisch(async () => {
   await B('schleife', TEXT.gesucht, 760);
   await bis(t13 + 0.76);
-});
+}, 192);                                                        // sehr schnelle Fahrt: achtmal mehr Einzelbilder, sonst Doppelkonturen statt Unschärfe
 await bis(t13 + 0.85);
 filmEnde = uhrzeit();
 const dauer = filmJetzt();
