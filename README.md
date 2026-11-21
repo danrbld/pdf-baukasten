@@ -12,6 +12,8 @@ Viele einzelne PDFs sammeln, benennen, per Häkchen zu einer neuen PDF zusammens
 
 Keine Installation, kein Konto, kein Internet nötig.
 
+[Video ansehen: so geht es in einer Minute](https://github.com/danrbld/pdf-baukasten/releases/latest/download/PDF-Baukasten-Demo.mp4)
+
 ## Was es kann
 
 - Hunderte PDFs als Bestand, mit eigenen Namen, Suche und Sortierung. Getestet mit 300 PDFs und 796 Seiten.
