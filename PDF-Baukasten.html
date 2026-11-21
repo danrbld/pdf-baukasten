@@ -1547,7 +1547,24 @@ function zeigeSeite(nummer) {
 // ---------------------------------------------------------------------------
 // PDFs in den Bestand aufnehmen
 // ---------------------------------------------------------------------------
+// Prüft, ob eine der gespeicherten Dateien (gleicher Name, gleiche Größe) Byte für Byte gleich ist.
+async function schonDa(bytes, ids) {
+  if (!ids) return false;
+  const neu = new Uint8Array(bytes);
+  for (const id of ids) {
+    const alt = await hole('dateien', id).catch(() => null);
+    if (!alt) continue;
+    const a = new Uint8Array(alt);
+    if (a.length !== neu.length) continue;
+    let gleich = true;
+    for (let i = 0; i < a.length; i++) if (a[i] !== neu[i]) { gleich = false; break; }
+    if (gleich) return true;
+  }
+  return false;
+}
+
 async function nimmAuf(dateien) {
+  await gestartet;   // erst aufnehmen, wenn der Speicher geöffnet und der Bestand geladen ist
   if (importLaeuft) { toast('Es werden gerade PDFs aufgenommen. Danach geht es weiter.'); return; }
   const pdfs = dateien.filter((f) => /\.pdf$/i.test(f.name) || f.type === 'application/pdf');
   const keinePdf = dateien.length - pdfs.length;
@@ -1560,7 +1577,12 @@ async function nimmAuf(dateien) {
   el.bericht.hidden = true;
   el.importLauf.hidden = false;
   el.erstellen.disabled = true;
-  const bekannt = new Set([...bestand.values()].map((d) => `${d.datei}\n${d.groesse}`));
+  // Gleicher Name und gleiche Größe: Kandidat für ein Doppel, der Inhalt entscheidet.
+  const bekannt = new Map();
+  for (const d of bestand.values()) {
+    const k = `${d.datei}\n${d.groesse}`;
+    bekannt.set(k, [...(bekannt.get(k) || []), d.id]);
+  }
   const uebersprungen = [];
   let neu = 0;
   let doppelt = 0;
@@ -1574,12 +1596,11 @@ async function nimmAuf(dateien) {
     await pause();
 
     const kennung = `${datei.name}\n${datei.size}`;
-    if (bekannt.has(kennung)) { doppelt++; continue; }
-
     let bytes;
     let seiten = 0;
     try {
       bytes = await datei.arrayBuffer();
+      if (await schonDa(bytes, bekannt.get(kennung))) { doppelt++; continue; }
       const pdf = await PDFDocument.load(bytes, { updateMetadata: false });
       seiten = pdf.getPageCount();
     } catch (fehler) {
@@ -1599,7 +1620,7 @@ async function nimmAuf(dateien) {
       break;
     }
     bestand.set(doc.id, doc);
-    bekannt.add(kennung);
+    bekannt.set(kennung, [...(bekannt.get(kennung) || []), doc.id]);
     neu++;
     if (neu % 25 === 0) zeichneBestand();
   }
@@ -2025,6 +2046,7 @@ $('#info-auf').addEventListener('click', () => {
   el.info.showModal();
 });
 $('#alles-loeschen').addEventListener('click', async () => {
+  if (importLaeuft) { toast('Es werden gerade PDFs aufgenommen. Bitte danach löschen.'); return; }
   if (!confirm('Wirklich alle PDFs, Namen und Einstellungen aus diesem Browser löschen? Die Originale auf der Festplatte bleiben.')) return;
   clearTimeout(speicherUhr);
   daumenSchlange.length = 0;
@@ -2046,7 +2068,7 @@ $('#alles-loeschen').addEventListener('click', async () => {
 // ---------------------------------------------------------------------------
 // Start
 // ---------------------------------------------------------------------------
-(async () => {
+const gestartet = (async () => {
   db = await dbOeffnen();
   let gemerkt = null;
   try {

@@ -1,13 +1,13 @@
 {
   "name": "pdf-baukasten",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Viele PDFs sammeln, per Häkchen zu einer neuen PDF zusammenstellen und durchnummerieren. Läuft lokal im Browser.",
   "directories": {
     "test": "test"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "node build.mjs",
+    "test": "node test/pruefung.mjs chromium"
   },
   "keywords": [],
   "type": "commonjs",
@@ -16,5 +16,7 @@
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^4.10.38",
     "playwright": "^1.65.1"
-  }
+  },
+  "license": "MIT",
+  "private": true
 }

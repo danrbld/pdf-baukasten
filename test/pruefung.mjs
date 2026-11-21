@@ -304,6 +304,17 @@ pruefe(true, 'Nach dem Löschen bleibt der Bestand auch nach Neuladen leer');
 // Schmale Fenster
 await page.setInputFiles('#datei-wahl', erste);
 await wartImport();
+// Andere PDF mit gleichem Namen und gleicher Größe (ein Byte im Kommentar der Kopfzeile geändert) ist kein Doppel
+const zwilling = Buffer.from(readFileSync(join(daten, 'Zuschnitt.pdf')));
+if (zwilling[10] < 0x80) throw new Error('Zuschnitt.pdf hat keine binäre Kommentarzeile an Stelle 10');
+zwilling[10] ^= 1;
+await page.setInputFiles('#datei-wahl', [{ name: 'Zuschnitt.pdf', mimeType: 'application/pdf', buffer: zwilling }]);
+await wartImport();
+pruefe(await zeilen().count() === 9, 'Andere PDF mit gleichem Namen und gleicher Größe wird trotzdem aufgenommen', `(${await zeilen().count()})`);
+await page.setInputFiles('#datei-wahl', [{ name: 'Zuschnitt.pdf', mimeType: 'application/pdf', buffer: zwilling }]);
+await wartImport();
+pruefe(await zeilen().count() === 9, 'Dieselbe PDF ein zweites Mal wird als Doppel erkannt', `(${await zeilen().count()})`);
+if (await page.locator('#bericht-zu').isVisible()) await page.click('#bericht-zu');
 await (await zeileMit('Rechnung 10')).locator('input[type="checkbox"]').check();
 await (await zeileMit('Querformat')).locator('input[type="checkbox"]').check();
 for (const [breite, hoehe] of [[1024, 768], [820, 1000], [390, 844]]) {
