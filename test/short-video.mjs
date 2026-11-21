@@ -81,9 +81,9 @@ const TEXT = {
   einheit: 'Seiten.',
   wort: 'Durchnummeriert.',
   nummer: 'Werkzeug Nr. 1',
-  fakten: ['Kostenlos', 'Läuft lokal', 'Kein Upload'],
+  fakten: ['Läuft lokal', 'Kein Upload', 'Eine Datei'],
   link: 'Link im Profil',
-  folgen: 'Folgen kostet auch nichts.',
+  folgen: 'Was suchst du? Schreib mir.',
   mappe: 'Unterlagen Versammlung 2027',
   neuerName: 'Vollmacht Hausverwaltung',
 };
